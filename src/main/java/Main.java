@@ -12,15 +12,11 @@ public class Main {
 
         Scanner scanner = new Scanner(System.in);
 
-        System.out.println("Write website url");
+        System.out.println("Write website url. Example : << https://lenta.ru/ >>");
+
         String url = scanner.nextLine();
 
-        if (!checkCorrect(url)){
-            url = "http://" + url;
-        }
-
         System.out.println("The program will be launched in " + processorCoreCount + " threads");
-
         System.out.println("Scan started!");
 
         LinkPull linkPull = new LinkPull(url, url);
@@ -29,7 +25,6 @@ public class Main {
         System.out.println("Scan completed!\nWrite to file started");
 
         writeFile(map);
-
 
     }
     public static void writeFile(String map){
@@ -42,10 +37,7 @@ public class Main {
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
-        System.out.println("File recorded to << src/main/map.txt >>");
+        System.out.println("File recorded to << " + path + " >>");
     }
-    
-    public static boolean checkCorrect(String url){
-        return url.contains("http://");
-    }
+
 }

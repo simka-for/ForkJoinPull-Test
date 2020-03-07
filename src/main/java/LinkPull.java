@@ -33,8 +33,6 @@ public class LinkPull extends RecursiveTask<String> {
         return stringBuffer.toString();
     }
 
-
-
     private void getUrl(Set<LinkPull> task){
         try {
             Thread.sleep(100);
