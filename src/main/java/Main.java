@@ -8,11 +8,9 @@ import java.util.concurrent.ForkJoinPool;
 
 public class Main {
 
-    private static Scanner scanner;
     private static String url;
     private static long start;
     private static ForkJoinPool forkJoinPool;
-    private static Thread workThread;
 
     private static final int processorCoreCount = Runtime.getRuntime().availableProcessors();
 
@@ -33,7 +31,7 @@ public class Main {
     }
 
     private static void startWorkThread() {
-        workThread = new Thread(() -> {
+        Thread workThread = new Thread(() -> {
 
             forkJoinPool = new ForkJoinPool(processorCoreCount);
 
@@ -53,7 +51,7 @@ public class Main {
 
 
     private static boolean isUrlValid() {
-        scanner = new Scanner(System.in);
+        Scanner scanner = new Scanner(System.in);
         url = scanner.nextLine().trim();
         if (url.matches("(http(s)*://)*(www\\.)*.+\\..+")) {
             String https = "https://";
@@ -68,11 +66,7 @@ public class Main {
         final String tab = "\t";
         ArrayList<String> resultList = new ArrayList<>();
 
-        String tabString = "";
-        for (int j = 0; j < url.getUrlLevel(); j++) {
-            tabString += tab;
-        }
-        resultList.add(tabString + url.getUrl() + "\n");
+        resultList.add(tab.repeat(Math.max(0, url.getUrlLevel())) + url.getUrl() + "\n");
         if (url.getSubUrlList() != null) {
             for (URL outUrl : url.getSubUrlList()) {
                 ArrayList<String> tempStringList = buildStringsFromPage(outUrl);
