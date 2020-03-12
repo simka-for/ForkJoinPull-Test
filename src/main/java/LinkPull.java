@@ -3,37 +3,59 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveTask;
 
-public class LinkPull extends RecursiveTask<String> {
+public class LinkPull extends RecursiveTask<URL> {
 
-    private String url;
-    private static String firstUrl;
-    private static ArrayList<String> allUrl = new ArrayList<>();
+    private URL url;
+    private String firstUrl;
+    private volatile Set<String> visitedLinks;
+    private volatile Queue<URL> queueURL;
 
-    public LinkPull(String url){
-        this.url = url.trim();
+
+    public LinkPull(String firstUrl){
+        this.url = new URL(firstUrl, 0);
+        this.firstUrl = firstUrl ;
+        this.visitedLinks = Collections.synchronizedSet(new HashSet<>());
+        this.queueURL = new ConcurrentLinkedQueue<>();
+        this.visitedLinks.add(firstUrl);
     }
-    public LinkPull(String url, String startUrl) {
-        this.url = url.trim();
-        LinkPull.firstUrl = startUrl.trim();
+    public LinkPull(URL url, String firstUrl, Set<String> visitedLinks, Queue<URL> queueURL) {
+        this.url = url;
+        this.firstUrl = firstUrl;
+        this.visitedLinks = visitedLinks;
+        this.queueURL = queueURL;
     }
 
     @Override
-    protected String compute() {
-        StringBuffer stringBuffer = new StringBuffer(url + "\n");
-        Set<LinkPull> task = new HashSet<>();
-        getUrl(task);
-        for (LinkPull link : task) {
-            stringBuffer.append(link.join());
+    protected URL compute() {
+        String currentUrl = url.getUrl();
+        HashSet<String> links = getUrl(currentUrl);
+        ArrayList<LinkPull> taskList = new ArrayList<>();
+        for (String link : links) {
+            if (!visitedLinks.contains(link)) {
+                URL newPage = new URL(link, (url.getUrlLevel() + 1));
+                queueURL.add(newPage);
+                visitedLinks.add(link);
+            }
         }
-        return stringBuffer.toString();
+        while (queueURL.peek() != null) {
+            URL tempPage = queueURL.poll();
+            LinkPull task = new LinkPull(tempPage, firstUrl, visitedLinks, queueURL);
+            url.addSubUrl(tempPage);
+            task.fork();
+            taskList.add(task);
+        }
+        taskList.forEach(ForkJoinTask::join);
+        return url;
     }
 
-    private void getUrl(Set<LinkPull> task){
+    public HashSet<String> getUrl(String url){
+        HashSet<String> resultList = new HashSet<>();
+        System.out.println("Parsing URL with address: " + url);
         try {
             Thread.sleep(100);
             Document doc = Jsoup.connect(url).get();
@@ -41,15 +63,15 @@ public class LinkPull extends RecursiveTask<String> {
 
             for (Element el : elements){
                 String attr = el.attr("abs:href");
-                if (!attr.isEmpty() && !attr.contains("#") && !allUrl.contains(attr) && attr.startsWith(firstUrl)){
+                if (!attr.isEmpty() && !attr.contains("#") && !visitedLinks.contains(attr) && attr.startsWith(firstUrl)){
                     LinkPull linkPull = new LinkPull(attr);
                     linkPull.fork();
-                    task.add(linkPull);
-                    allUrl.add(attr);
+                    resultList.add(attr);
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
+        return resultList;
     }
 }
